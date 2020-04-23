@@ -1,0 +1,9 @@
+name: bucket-indexer
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - jinja2
+  - google-cloud-storage
+  - pip
