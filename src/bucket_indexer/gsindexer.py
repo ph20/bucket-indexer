@@ -1,22 +1,25 @@
 import os
-import mimetypes
 import base64
 
 import sys
 from google.cloud import storage
+from google.api_core import exceptions
 from pathlib import Path
 import jinja2
 
 APP_NAME = 'Bucket Indexer'
 APP_URL = 'https://github.com/ph20/bucket-indexer'
-APP_VERSION = '0.1'
+APP_VERSION = '0.2'
+INDEX_HTML = 'index.html'
+HIDDEN_FILES = (INDEX_HTML,)
 
-
+ICONSET_NAME = 'papirus'
 GOOGLE_STORAGE = 'gs://'
+ICONSETS = os.path.join(os.path.dirname(__file__), 'icons')
 
 
 class Node:
-    def __init__(self, name, parent=None):
+    def __init__(self, name, parent=None, blob_obj=None):
         self._name = name
         self._parent = parent
         self._modified = None
@@ -132,9 +135,23 @@ def generate_tree(blob_list):
     return root_node
 
 
-def gen_node_dict(node, icon='papirus'):
+def get_icon_by_mime(mime):
+    if mime:
+        mime_type, mime_subtype = mime.split('/')
+        valid_targets = [mime_type + '/' + mime_subtype, mime_subtype, mime_type, 'default']
+    else:
+        valid_targets = ['default']
+    for target in valid_targets:
+        path = os.path.join(ICONSETS, ICONSET_NAME, target + '.svg')
+        if os.path.isfile(path):
+            with open(path, 'rb') as ico_file:
+                return base64.b64encode(ico_file.read()).decode()
+
+
+def gen_node_dict(node):
     attr = ['path', 'name', 'size', 'modified', 'mime']
-    dict_ = {'icon': icon, 'isDir': isinstance(node, Dir)}
+    is_dir = isinstance(node, Dir)
+    dict_ = {'isDir': is_dir}
     for item in attr:
         fun = getattr(node, item, None)
         if callable(fun):
@@ -144,6 +161,10 @@ def gen_node_dict(node, icon='papirus'):
         else:
             var = fun
         dict_[item] = var
+    if is_dir:
+        dict_['mime'] = 'inode/directory'
+        dict_['path'] += '/'
+    dict_['icon'] = get_icon_by_mime(dict_['mime'])
     return dict_
 
 
@@ -151,7 +172,8 @@ def gen_dir_dict(dir_node: Dir):
     dir_listing = []
     for item in dir_node:
         dict_ = gen_node_dict(item)
-        dir_listing.append(dict_)
+        if dict_['name'] not in HIDDEN_FILES:
+            dir_listing.append(dict_)
     return dir_listing
 
 
@@ -182,11 +204,21 @@ def main(bucket_name):
     def walk_and_gen(dir_node: Dir):
         dir_list = gen_dir_dict(dir_node)
         htm_index = render_html(dir_node.path(), dir_list)
-        dir_path = (dir_node.path() + '/').lstrip('/')
-        index_path = dir_path + 'index.html'
+        dir_path = dir_node.path().lstrip('/')
+        if not dir_path:
+            index_path = INDEX_HTML
+            placeholder = None
+        else:
+            index_path = dir_path + '/' + INDEX_HTML
+            placeholder = dir_path + '/'
         print('Uploading {}'.format(index_path))
         blob = bucket.blob(index_path)
         blob.upload_from_string(htm_index, content_type='text/html')
+        if placeholder:
+            try:
+                bucket.delete_blob(placeholder)
+            except exceptions.NotFound:
+                pass
         for dir_obj in dir_node.dirs():
             walk_and_gen(dir_obj)
 
@@ -196,6 +228,6 @@ def main(bucket_name):
 if __name__ == "__main__":
     path = sys.argv[1]
     if not path.startswith(GOOGLE_STORAGE):
-        print('Incorrect schema. Suppoertd shema is {}'.format(GOOGLE_STORAGE))
+        print('Incorrect schema. Supported shema is {}'.format(GOOGLE_STORAGE))
         exit(1)
     main(path[len(GOOGLE_STORAGE):])
