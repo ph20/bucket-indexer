@@ -32,7 +32,7 @@
         <td><a href="{{ file.path }}">{{ file.name }}</a></td>
         <td>{{ file.size }}</td>
         {% endif %}
-        <td>{{ file.modified }}</td>
+        <td>{{ file.modified if file.modified != None else '-'}}</td>
     </tr>
     {% endfor %}
 </table>
