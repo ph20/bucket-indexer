@@ -194,7 +194,7 @@ def render_fabric(theme='default', entry='index.html'):
     })
 
 
-def main(bucket_name):
+def indexing(bucket_name):
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob_list = [BlobObj(name=_.name, mime=_.content_type, modified=_.updated, size=_.size) for _ in bucket.list_blobs()]
@@ -225,9 +225,14 @@ def main(bucket_name):
     walk_and_gen(tree)
 
 
-if __name__ == "__main__":
-    path = sys.argv[1]
+def main(argv=None):
+    argv = argv or sys.argv[1:]
+    path = argv[0]
     if not path.startswith(GOOGLE_STORAGE):
         print('Incorrect schema. Supported shema is {}'.format(GOOGLE_STORAGE))
         exit(1)
-    main(path[len(GOOGLE_STORAGE):])
+    indexing(path[len(GOOGLE_STORAGE):])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
