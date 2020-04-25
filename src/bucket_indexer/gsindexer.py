@@ -9,7 +9,7 @@ import jinja2
 
 APP_NAME = 'Bucket Indexer'
 APP_URL = 'https://github.com/ph20/bucket-indexer'
-APP_VERSION = '0.3'
+APP_VERSION = '0.4'
 INDEX_HTML = 'index.html'
 HIDDEN_FILES = (INDEX_HTML,)
 
