@@ -12,8 +12,13 @@ Utils for generating html index of files on cloud buckets
 `conda env create -f environment.yml`
 
 `conda activate bucket-indexer`
-3. Usage
+# Usage
+1. Installation:
 
-   `./gsindexer.py gs://bucket-name`
+`pip3 install git+https://github.com/ph20/bucket-indexer.git`
+
+2. Generating index files on google storage:
+
+`gsindexer gs://bucket-name`
    
 Based on templates and ideas from [Index Generator](https://github.com/index-generator-project/index-generator)
